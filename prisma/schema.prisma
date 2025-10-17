@@ -1,0 +1,36 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Source {
+  id        String   @id @default(cuid())
+  name      String
+  region    String?
+  rssUrl    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  articles  Article[]
+}
+
+model Article {
+  id           String   @id @default(cuid())
+  externalId   String
+  title        String
+  url          String
+  outlet       String
+  region       String?
+  publishedAt  DateTime
+  ingestedAt   DateTime @default(now())
+  sourceId     String
+  source       Source   @relation(fields: [sourceId], references: [id])
+
+  @@unique([externalId, sourceId])
+  @@index([publishedAt])
+}
