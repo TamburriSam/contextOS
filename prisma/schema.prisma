@@ -31,6 +31,20 @@ model Article {
   sourceId     String
   source       Source   @relation(fields: [sourceId], references: [id])
 
+  // 🔽 ADD THIS LINE
+  emotion      ArticleEmotion?
+
   @@unique([externalId, sourceId])
   @@index([publishedAt])
+}
+
+model ArticleEmotion {
+  articleId String  @id
+  article   Article @relation(fields: [articleId], references: [id])
+  fear      Float   @default(0)
+  anger     Float   @default(0)
+  joy       Float   @default(0)
+  hope      Float   @default(0)
+  neutral   Float   @default(1)
+  createdAt DateTime @default(now())
 }
