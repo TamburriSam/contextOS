@@ -4,14 +4,16 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ArticlesModule } from './articles/articles.module';
 import { FeedsModule } from './feeds/feeds.module';
 import { AnalysisModule } from './analysis/analysis.module';
+import { NewsModule } from './news/news.module'; // ✅ add this
 
 @Module({
   imports: [
-    ScheduleModule.forRoot(), // ✅ do this once at root
+    ScheduleModule.forRoot(), // ✅ initialize scheduler once
     PrismaModule,
     ArticlesModule,
     AnalysisModule,
     FeedsModule,
+    NewsModule, // ✅ add this line
   ],
 })
 export class AppModule {}

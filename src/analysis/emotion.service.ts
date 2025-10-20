@@ -25,6 +25,8 @@ export class EmotionService {
     let hope = Math.max(0, pos * 0.3);
     let neutral = Math.max(0, neu);
 
+    console.log(compound, pos, neu, neg)
+
     // boost intensity
     if (compound <= -0.6) { fear += 0.15; anger += 0.10; }
     if (compound >=  0.6) { joy  += 0.15; hope  += 0.10; }
