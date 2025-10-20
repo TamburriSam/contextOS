@@ -10,41 +10,70 @@ generator client {
 }
 
 model Source {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
   region    String?
-  rssUrl    String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  rssUrl    String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   articles  Article[]
 }
 
 model Article {
-  id           String   @id @default(cuid())
-  externalId   String
-  title        String
-  url          String
-  outlet       String
-  region       String?
-  publishedAt  DateTime
-  ingestedAt   DateTime @default(now())
-  sourceId     String
-  source       Source   @relation(fields: [sourceId], references: [id])
+  id          String   @id @default(cuid())
+  externalId  String
+  title       String
+  url         String
+  outlet      String
+  region      String?
+  publishedAt DateTime
+  ingestedAt  DateTime @default(now())
+  sourceId    String
+  source      Source   @relation(fields: [sourceId], references: [id])
 
-  // 🔽 ADD THIS LINE
-  emotion      ArticleEmotion?
+  // existing one-to-one emotion
+  emotion ArticleEmotion?
+
+  // ✅ back-relation for ClusterItem → Article
+  clusterItems ClusterItem[]
 
   @@unique([externalId, sourceId])
   @@index([publishedAt])
 }
 
 model ArticleEmotion {
-  articleId String  @id
-  article   Article @relation(fields: [articleId], references: [id])
-  fear      Float   @default(0)
-  anger     Float   @default(0)
-  joy       Float   @default(0)
-  hope      Float   @default(0)
-  neutral   Float   @default(1)
+  articleId String   @id
+  article   Article  @relation(fields: [articleId], references: [id])
+  fear      Float    @default(0)
+  anger     Float    @default(0)
+  joy       Float    @default(0)
+  hope      Float    @default(0)
+  neutral   Float    @default(1)
   createdAt DateTime @default(now())
+}
+
+model ClusterSnapshot {
+  id        String        @id @default(cuid())
+  createdAt DateTime      @default(now())
+  label     String
+  keywords  String // "ai,model,openai"
+  size      Int
+  items     ClusterItem[]
+}
+
+model ClusterItem {
+  snapshotId String
+  articleId  String
+
+  // freeze emotion at snapshot time
+  fear    Float
+  anger   Float
+  joy     Float
+  hope    Float
+  neutral Float
+
+  snapshot ClusterSnapshot @relation(fields: [snapshotId], references: [id])
+  article  Article         @relation(fields: [articleId], references: [id])
+
+  @@id([snapshotId, articleId])
 }
