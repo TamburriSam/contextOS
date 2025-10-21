@@ -1,29 +1,29 @@
 import { Injectable } from '@nestjs/common';
 import stringSimilarity from 'string-similarity';
 
-// ---------- Tuning knobs ----------
-const KEYWORDS_PER_DOC = 12;
-const CLUSTER_SIMILARITY_THRESHOLD = 0.28; // Jaccard on keyword sets
-const DUPLICATE_TITLE_SIMILARITY = 0.8; // title string-similarity
 
-// ---------- Types ----------
+const KEYWORDS_PER_DOC = 12;
+const CLUSTER_SIMILARITY_THRESHOLD = 0.28; 
+const DUPLICATE_TITLE_SIMILARITY = 0.8; 
+
+
 export type ArticleForClustering = {
   id: string;
   title: string;
   url: string;
   summary?: string;
-  score?: number; // in-memory sort bias (recency/weights if you want)
-  keywords?: string[]; // optional precomputed keywords
+  score?: number; 
+  keywords?: string[]; 
 };
 
 export type ClusterGroup = {
-  ids: number[]; // indices into the input array
-  label: string; // human-readable label ("ai • openai • model")
-  keywords: string[]; // top cluster keywords
-  size: number; // number of items in the cluster
+  ids: number[]; 
+  label: string; 
+  keywords: string[]; 
+  size: number; 
 };
 
-// ---------- Helpers ----------
+
 function normalizeWhitespace(text: string): string {
   return (text || '')
     .replace(/<[^>]*>/g, ' ')
@@ -56,13 +56,11 @@ function areNearDuplicateTitles(
   a: { title: string; url: string },
   b: { title: string; url: string },
 ): boolean {
-  // Quick URL-path heuristic
   try {
     const aPath = new URL(a.url).pathname.split('/').slice(0, 3).join('/');
     const bPath = new URL(b.url).pathname.split('/').slice(0, 3).join('/');
     if (aPath === bPath) return true;
   } catch {}
-  // Fuzzy title check
   return (
     stringSimilarity.compareTwoStrings(a.title, b.title) >=
     DUPLICATE_TITLE_SIMILARITY
@@ -71,24 +69,18 @@ function areNearDuplicateTitles(
 
 @Injectable()
 export class ClusterService {
-  /**
-   * Ensure each item has keywords and a numeric score.
-   */
   enrich(items: ArticleForClustering[]): Required<ArticleForClustering>[] {
     return items.map((item) => ({
       ...item,
-      summary: item.summary ?? '', // ✅ now always a string
+      summary: item.summary ?? '',
       keywords:
         item.keywords && item.keywords.length
           ? item.keywords
           : extractTopKeywords(`${item.title} ${item.summary ?? ''}`),
       score: item.score ?? 1,
-    })) as Required<ArticleForClustering>[]; // ✅ satisfies the signature
+    })) as Required<ArticleForClustering>[];
   }
 
-  /**
-   * Remove near-duplicates, keeping the highest-score item.
-   */
   dedupe<T extends { title: string; url: string; score?: number }>(
     items: T[],
   ): T[] {
@@ -103,10 +95,6 @@ export class ClusterService {
     return unique;
   }
 
-  /**
-   * Form clusters by Jaccard similarity on keyword sets, then label them by
-   * the most frequent keywords across members.
-   */
   cluster(
     items: { keywords?: string[] }[],
     threshold = CLUSTER_SIMILARITY_THRESHOLD,
@@ -135,7 +123,6 @@ export class ClusterService {
 
     return groups
       .map((g) => {
-        // Compute keyword frequencies across group members
         const freq: Record<string, number> = {};
         for (const idx of g.ids) {
           for (const w of items[idx].keywords || [])
