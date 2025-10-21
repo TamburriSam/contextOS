@@ -1,3 +1,4 @@
+
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as crypto from 'crypto';
@@ -26,6 +27,10 @@ export class ArticlesService {
     url: string;
     publishedAt: Date;
     externalId?: string;
+
+    
+    thumbUrl?: string;
+    thumbSource?: string; 
   }) {
     const externalId = p.externalId ?? this.hash(p.url);
     return this.prisma.article.upsert({
@@ -37,6 +42,9 @@ export class ArticlesService {
         region: p.region,
         publishedAt: p.publishedAt,
         ingestedAt: new Date(),
+        
+        thumbUrl: p.thumbUrl,
+        thumbSource: p.thumbSource,
       },
       create: {
         externalId,
@@ -46,6 +54,9 @@ export class ArticlesService {
         region: p.region,
         publishedAt: p.publishedAt,
         sourceId: p.sourceId,
+        
+        thumbUrl: p.thumbUrl,
+        thumbSource: p.thumbSource,
       },
     });
   }
@@ -55,13 +66,12 @@ export class ArticlesService {
       orderBy: { publishedAt: 'desc' },
       take: limit,
       include: {
-        emotion: true, // 👈 this joins the related ArticleEmotion row
+        emotion: true,
         source: true,
       },
     });
   }
 
-  // 👇 Add this at the bottom
   async upsertEmotion(
     articleId: string,
     scores: {

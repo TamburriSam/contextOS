@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import vader from 'vader-sentiment';
 
-// Keyword sets to enrich emotion mapping
+
 const FEAR  = ['fear','panic','threat','crisis','terror','warns','alarm','collapse','shock'];
 const ANGER = ['anger','furious','outrage','slam','blast','rage','backlash'];
 const JOY   = ['joy','win','soars','surges','celebrate','delight','record'];
@@ -27,7 +27,7 @@ export class EmotionService {
 
     console.log(compound, pos, neu, neg)
 
-    // boost intensity
+    
     if (compound <= -0.6) { fear += 0.15; anger += 0.10; }
     if (compound >=  0.6) { joy  += 0.15; hope  += 0.10; }
 
