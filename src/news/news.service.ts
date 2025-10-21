@@ -1,4 +1,4 @@
-// src/news/news.service.ts
+
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ArticlesService } from '../articles/article.service';
@@ -14,10 +14,10 @@ export class NewsService {
     private clusterer: ClusterService,
   ) {}
 
-  // Build clusters from the most recent N articles
+  
   async refreshClusters({ recentLimit = 200, topN = 10, pool = 60 } = {}) {
     const recent = await this.articles.latest(recentLimit);
-    // enrich + dedupe
+    
     const enriched = this.clusterer.enrich(
       recent.map((a) => ({
         id: a.id,
@@ -25,8 +25,8 @@ export class NewsService {
         url: a.url,
         source: a.outlet,
         published: a.publishedAt,
-        summary: '', // <- no summary in DB
-        score: 1, // <- simple constant; used only for sorting in-memory
+        summary: '', 
+        score: 1, 
       })),
     );
     const deduped = this.clusterer.dedupe(enriched);
@@ -35,10 +35,10 @@ export class NewsService {
     const poolSet = deduped.slice(0, pool);
     const groups = this.clusterer.cluster(poolSet);
 
-    // persist snapshot
+    
     const snapshot = await this.prisma.clusterSnapshot.create({
       data: {
-        label: 'snapshot', // not shown; clusters carry their own label
+        label: 'snapshot', 
         keywords: '',
         size: 0,
       },
@@ -55,8 +55,8 @@ export class NewsService {
 
       for (const id of g.ids) {
         const art = poolSet[id];
-        // recompute emotion from title to attach (or read from article.emotion)
-        // You *already* saved emotion per article, so pull it if present:
+        
+        
         const existing = recent.find((r) => r.id === art.id)?.emotion;
         const e = existing ?? this.emotion.scoreHeadline(art.title);
 
@@ -78,7 +78,7 @@ export class NewsService {
   }
 
   async getLatestTop(limit = 10) {
-    // Top = newest with highest recency (you can change ordering rule)
+    
     return this.prisma.article.findMany({
       orderBy: { publishedAt: 'desc' },
       take: limit,
@@ -87,13 +87,13 @@ export class NewsService {
   }
 
   async getLatestClusters() {
-    // get latest snapshot time
+    
     const last = await this.prisma.clusterSnapshot.findFirst({
       orderBy: { createdAt: 'desc' },
     });
     if (!last) return [];
 
-    // fetch all snapshots created at that same timestamp (one per cluster)
+    
     const clusters = await this.prisma.clusterSnapshot.findMany({
       where: { createdAt: last.createdAt },
       orderBy: { size: 'desc' },
@@ -104,7 +104,7 @@ export class NewsService {
       include: { article: { include: { emotion: true, source: true } } },
     });
 
-    // group
+    
     const byId = new Map(
       clusters.map((c) => [c.id, { ...c, articles: [] as any[] }]),
     );
@@ -116,8 +116,8 @@ export class NewsService {
         url: it.article.url,
         source: it.article.outlet,
         published: it.article.publishedAt,
-        score: 1,
-        keywords: (it.article as any).keywords?.split(',') ?? [],
+        thumbUrl: it.article.thumbUrl, 
+        thumbSource: it.article.thumbSource,
         emotion: {
           fear: it.fear,
           anger: it.anger,
@@ -128,7 +128,7 @@ export class NewsService {
       });
     }
 
-    // sort articles within each cluster by recency/score
+    
     const result = [...byId.values()].map((c) => ({
       id: c.id,
       label: c.label,

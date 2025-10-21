@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class ArticlesController {
   constructor(private prisma: PrismaService) {}
 
-  // GET /articles/latest?limit=25
+  
   @Get('latest')
   async latest(@Query('limit') limit = '25') {
     const take = Math.max(1, Math.min(200, Number(limit)));
@@ -19,8 +19,8 @@ export class ArticlesController {
     });
   }
 
-  // GET /articles/search?q=Zelensky&limit=50
-  // src/articles/articles.controller.ts
+  
+  
   @Get('search')
   async search(@Query('q') q = '', @Query('limit') limit = '50') {
     const take = Math.max(1, Math.min(200, Number(limit)));
@@ -34,7 +34,7 @@ export class ArticlesController {
     });
   }
 
-  // GET /articles/:id
+  
   @Get(':id')
   async byId(@Param('id') id: string) {
     return this.prisma.article.findUnique({

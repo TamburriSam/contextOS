@@ -2,12 +2,12 @@ import { Module } from '@nestjs/common';
 import { FeedsService } from './feeds.service';
 import { FeedsController } from './feeds.controller';
 import { ArticlesModule } from '../articles/articles.module';
-import { AnalysisModule } from '../analysis/analysis.module'; // ✅ import this
+import { AnalysisModule } from '../analysis/analysis.module'; 
 
 @Module({
   imports: [
     ArticlesModule,
-    AnalysisModule, // ✅ now FeedsModule sees EmotionService
+    AnalysisModule, 
   ],
   providers: [FeedsService],
   controllers: [FeedsController],

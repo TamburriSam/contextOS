@@ -1,10 +1,76 @@
+
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import Parser from 'rss-parser';
-import { ArticlesService } from '../articles/article.service'; // keep this path if your file is article.service.ts
+import got from 'got';
+import createMetascraper from 'metascraper';
+import metascraperImage from 'metascraper-image';
+import metascraperTwitter from 'metascraper-twitter';
+import metascraperUrl from 'metascraper-url';
+
+import { ArticlesService } from '../articles/article.service';
 import { EmotionService } from '../analysis/emotion.service';
 
 type FeedDef = { name: string; rssUrl: string; region?: string };
+
+
+type RssItem = Parser.Item & {
+  enclosure?: { url?: string; type?: string; length?: number };
+  
+  [key: string]: any;
+};
+
+const metascraper = createMetascraper([
+  metascraperImage(),
+  metascraperTwitter(),
+  metascraperUrl(),
+]);
+
+const HTTP_HEADERS = {
+  'user-agent':
+    'Mozilla/5.0 (compatible; ContextOSBot/1.0; +https://example.com/bot)',
+  accept:
+    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+};
+
+async function resolveOgThumb(articleUrl: string): Promise<{
+  thumbUrl?: string;
+  thumbSource?: 'og' | 'twitter';
+}> {
+  try {
+    const { body, url } = await got(articleUrl, {
+      headers: HTTP_HEADERS,
+      timeout: { request: 6000 },
+      retry: { limit: 1 },
+      followRedirect: true,
+    });
+    const meta = await metascraper({ html: body, url });
+    if (meta.image) {
+      
+      return { thumbUrl: meta.image, thumbSource: 'og' };
+    }
+  } catch {
+    
+  }
+  return {};
+}
+
+function getRssThumb(item: RssItem): string | undefined {
+  
+  if (item.enclosure?.url && /^image\
+    return item.enclosure.url;
+  }
+  const mc = item['media:content'] || item.media?.content;
+  if (mc?.url) return mc.url as string;
+
+  const mt = item['media:thumbnail'] || item.media?.thumbnail;
+  if (mt?.url) return mt.url as string;
+
+  if (typeof item.image === 'string') return item.image as string;
+  if (typeof item.thumbnail === 'string') return item.thumbnail as string;
+
+  return undefined;
+}
 
 @Injectable()
 export class FeedsService {
@@ -12,7 +78,7 @@ export class FeedsService {
   private parser = new Parser();
 
   private feeds: FeedDef[] = [
-    // General / World News
+    
     {
       name: 'BBC News',
       rssUrl: 'https://feeds.bbci.co.uk/news/rss.xml',
@@ -60,7 +126,7 @@ export class FeedsService {
       region: 'US',
     },
 
-    // Technology & Startups
+    
     {
       name: 'TechCrunch',
       rssUrl: 'http://feeds.feedburner.com/TechCrunch/',
@@ -104,7 +170,7 @@ export class FeedsService {
     },
     { name: 'Gizmodo', rssUrl: 'https://gizmodo.com/rss', region: 'US' },
 
-    // Business & Finance
+    
     {
       name: 'Bloomberg',
       rssUrl: 'https://www.bloomberg.com/feed/podcast/etf-report.xml',
@@ -128,11 +194,6 @@ export class FeedsService {
     {
       name: 'The Economist',
       rssUrl: 'https://www.economist.com/latest/rss.xml',
-      region: 'US',
-    },
-    {
-      name: 'Harvard Business Review',
-      rssUrl: 'https://hbr.org/feed',
       region: 'US',
     },
     {
@@ -177,9 +238,8 @@ export class FeedsService {
         );
         const parsed = await this.parser.parseURL(feed.rssUrl);
 
-        for (const item of parsed.items.slice(0, 10)) {
+        for (const item of (parsed.items as RssItem[]).slice(0, 10)) {
           scanned++;
-
           try {
             const title = (item.title ?? '').trim();
             const url = (item.link ?? '').trim();
@@ -188,7 +248,13 @@ export class FeedsService {
             const extId = (item.guid ?? url).trim();
             const pub = item.isoDate ? new Date(item.isoDate) : new Date();
 
-            // upsert article
+            
+            let thumbUrl = getRssThumb(item);
+            let thumbSource: 'rss' | 'og' | 'twitter' | undefined = thumbUrl
+              ? 'rss'
+              : undefined;
+
+            
             const saved = await this.articles.upsertArticle({
               sourceId: source.id,
               outlet: feed.name,
@@ -197,9 +263,32 @@ export class FeedsService {
               url,
               publishedAt: pub,
               externalId: extId,
+              
+              thumbUrl,
+              thumbSource,
             });
 
-            // analyze emotion with VADER and persist ONLY the five numeric fields
+            
+            if (!thumbUrl) {
+              const resolved = await resolveOgThumb(url);
+              if (resolved.thumbUrl) {
+                thumbUrl = resolved.thumbUrl;
+                thumbSource = resolved.thumbSource ?? 'og';
+                await this.articles.upsertArticle({
+                  sourceId: source.id,
+                  outlet: feed.name,
+                  region: feed.region,
+                  title,
+                  url,
+                  publishedAt: pub,
+                  externalId: extId,
+                  thumbUrl,
+                  thumbSource,
+                });
+              }
+            }
+
+            
             const s = this.emotion.scoreHeadline(title);
             await this.articles.upsertEmotion(saved.id, {
               fear: s.fear,

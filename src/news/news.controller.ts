@@ -1,4 +1,4 @@
-// src/news/news.controller.ts
+
 import {
   Controller,
   Get,

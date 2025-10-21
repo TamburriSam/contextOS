@@ -1,4 +1,4 @@
-// prisma/schema.prisma
+
 
 datasource db {
   provider = "sqlite"
@@ -20,21 +20,21 @@ model Source {
 }
 
 model Article {
-  id          String   @id @default(cuid())
-  externalId  String
-  title       String
-  url         String
-  outlet      String
-  region      String?
-  publishedAt DateTime
-  ingestedAt  DateTime @default(now())
-  sourceId    String
-  source      Source   @relation(fields: [sourceId], references: [id])
+  id           String   @id @default(cuid())
+  externalId   String
+  title        String
+  url          String
+  outlet       String
+  region       String?
+  publishedAt  DateTime
+  ingestedAt   DateTime @default(now())
+  sourceId     String
+  source       Source   @relation(fields: [sourceId], references: [id])
 
-  // existing one-to-one emotion
-  emotion ArticleEmotion?
+  thumbUrl     String?
+  thumbSource  String?
 
-  // ✅ back-relation for ClusterItem → Article
+  emotion      ArticleEmotion?
   clusterItems ClusterItem[]
 
   @@unique([externalId, sourceId])
@@ -56,7 +56,7 @@ model ClusterSnapshot {
   id        String        @id @default(cuid())
   createdAt DateTime      @default(now())
   label     String
-  keywords  String // "ai,model,openai"
+  keywords  String 
   size      Int
   items     ClusterItem[]
 }
@@ -65,7 +65,7 @@ model ClusterItem {
   snapshotId String
   articleId  String
 
-  // freeze emotion at snapshot time
+  
   fear    Float
   anger   Float
   joy     Float
